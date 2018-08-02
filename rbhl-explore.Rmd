@@ -1,0 +1,64 @@
+---
+title: "Exploring BHL data for OCR text"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rbhl)
+library(dplyr)
+library(httr)
+my_bhl_key = ""
+options(bhl_key = my_bhl_key)
+```
+
+### Finding the target species
+
+The **namesearch** function returns a list of species we might be interested in.
+
+```{r}
+pa <- bhl_namesearch('Platycercus')
+pa
+```
+
+The **namegetdetail** function returns the Titles containing the chosen species info
+
+```{r}
+searchname = 'Platycercus adscitus (Latham, 1790)'
+titles <- bhl_namegetdetail(name=searchname) 
+titles <- select(titles,Titles.TitleID, Titles.ShortTitle, Titles.PublicationDate, Titles.Items) # pick out cols
+titles
+```
+
+The Items field has some interesting things in it. Pull one out using dplyr:
+
+```{r warning=FALSE}
+sampleitem <- titles %>%
+        filter(Titles.TitleID == 126732)  %>%
+        select(Titles.Items)
+sampleitem <- sampleitem$Titles.Items
+sampleitem
+```
+
+Paydirt! Items contains a list of the pages that mention this species along with the ocr url. Let's get those out.
+
+```{r, warning=FALSE}
+sampleitempages <- sampleitem[[1]]$Pages # list of pages
+sampleitempages <- sampleitempages[[1]] %>%
+        select(ItemID,PageID,PageUrl,OcrUrl,PageTypes,PageNumbers)
+sampleitempages
+```
+
+Make a http call to get the OCR text out. 
+
+```{r}
+url <- paste("",sampleitempages$OcrUrl,sep="")
+httpresponse <- GET(url)
+content(httpresponse)
+```
+
+Or rbhl has a method for this too:
+```{r}
+results <- bhl_getpageocrtext(sampleitempages$PageID)
+results
+```
