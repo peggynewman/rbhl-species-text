@@ -22,7 +22,7 @@ options(bhl_key = my_bhl_key)
 
 inputsearchterms <- c('Macropus Giganteus','Macropus fuliginosus','Macropus rufus')
 
-confirmednames <- c()
+confirmednames <- list()
 
 for (term in inputsearchterms) {
   namedf <- bhl_namesearch(term)
@@ -32,8 +32,7 @@ print("confirmed names")
 confirmednames
 
 # final dataframe (unique id is page id)
-df <- data.frame(SearchTerm=character()
-                 ,ScientificName=character()
+df <- data.frame(ScientificName=character()
                  ,TitleID=integer()
                  ,ShortTitle=character()
                  ,ItemID=integer()
@@ -42,22 +41,22 @@ df <- data.frame(SearchTerm=character()
                  ,OcrText=character(),stringsAsFactors=FALSE
 )
 
-for (n in confirmednames) {
-  tic(n)
-  resp <- fromJSON(bhl_namegetdetail(name=n,as="json"), flatten = FALSE, simplifyVector = FALSE)
-  titles <- resp$Result$Titleswarn
+for (sciname in confirmednames) {
+  tic(sciname)
+  resp <- fromJSON(bhl_namegetdetail(name=sciname,as="json"), flatten = FALSE, simplifyVector = FALSE)
+  titles <- resp$Result$Titles
   for (title in titles) {
     items <- title$Items   
     for (i in items) { 
       pages <- i$Pages
       for (p in pages) { # pages is a list
-        df[nrow(df) + 1,] = list(n
-                                 ,title$TitleID
-                                 ,title$ShortTitle
-                                 ,i$ItemID
-                                 ,p$PageID
-                                 ,paste(p$Year,"",sep="")
-                                 ,gsub("\n","||",paste(bhl_getpageocrtext(p$PageID),"",sep="")))
+        df[nrow(df) + 1,] = list(sciname
+                                ,title$TitleID
+                                ,title$ShortTitle
+                                ,i$ItemID
+                                ,p$PageID
+                                ,paste(p$Year,"",sep="")
+                                ,gsub("\n","||",paste(bhl_getpageocrtext(p$PageID),"",sep="")))
       }
     }
   }
@@ -66,4 +65,3 @@ for (n in confirmednames) {
 
 write.csv(df,file=paste("Macropus.csv",sep=""))
 
-          
